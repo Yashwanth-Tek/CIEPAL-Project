@@ -303,7 +303,7 @@ def api(method, path, **kw):
         r.raise_for_status()
         return r
     except requests.exceptions.ConnectionError:
-        st.error("⚠️  Backend offline — run: uvicorn backend:app --reload")
+        st.error("⚠️  Backend offline — run: uvicorn ciepal_service:app --reload")
         st.stop()
     except requests.exceptions.HTTPError as e:
         detail = ""
@@ -489,9 +489,9 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ─── Horizontal nav + import row ───────────────────────────────────────────────
-NAV = ["Dashboard", "Create Submission", "Edit / Delete", "Download Report"]
+NAV = ["Dashboard", "Download Report"]
 
-nav_cols = st.columns([1, 1, 1, 1, 0.25, 1.15])
+nav_cols = st.columns([1, 1, 0.25, 1.15])
 for i, name in enumerate(NAV):
     is_active = st.session_state.page == name
     wrapper = "nav-active" if is_active else ""
@@ -504,7 +504,7 @@ for i, name in enumerate(NAV):
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-with nav_cols[5]:
+with nav_cols[3]:
     st.markdown("<div class='import-btn'>", unsafe_allow_html=True)
     if st.button("Import from CIEPAL", key="import_btn",
                  use_container_width=True, disabled=not backend_ok):
@@ -661,120 +661,6 @@ if page == "Dashboard":
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
                 warn(f"Couldn't render that combination: {e}")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# CREATE
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "Create Submission":
-    st.markdown("<div class='page-h'>Create Submission</div>", unsafe_allow_html=True)
-    st.markdown("<div class='page-sub'>Add a new submission to the store. "
-                "Fields marked <span style='color:#fb7185'>*</span> are required — "
-                "everything else is optional.</div>", unsafe_allow_html=True)
-
-    with st.form("create_form", clear_on_submit=True):
-        form_data = {}
-        for group, fields in GROUPS.items():
-            # group header as a card-like band
-            st.markdown(f"<div class='group-card'><div class='sh' style='border:none;margin:0 0 14px'>"
-                        f"{group}</div>", unsafe_allow_html=True)
-            cols = st.columns(3)
-            for i, field in enumerate(fields):
-                with cols[i % 3]:
-                    is_req = (field == "Sub_ID")
-                    form_data[field] = field_input(field, key=f"c_{field}", required=is_req)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-        cbtn1, cbtn2 = st.columns([3, 1])
-        with cbtn1:
-            submitted = st.form_submit_button("Create Submission", use_container_width=True)
-        with cbtn2:
-            st.form_submit_button("Reset", use_container_width=True, type="secondary")
-
-    if submitted:
-        if not form_data.get("Sub_ID","").strip():
-            err("<b>Submission ID</b> is required to create a record.")
-        else:
-            payload = {k: v for k, v in form_data.items() if v not in (None,"",0,0.0)}
-            try:
-                rec = api("post", "/submissions", json=payload).json()
-                st.balloons()
-                ok(f"Submission <b>{rec['Sub_ID']}</b> created successfully "
-                   f"with <b>{len(payload)}</b> field(s) populated.")
-                # quick read-back summary of the key fields
-                summary = {pretty(k): rec.get(k) for k in
-                           ["Sub_ID","Job_Code","End_Client","Pipeline_Status","Submission_Bill_Rate"]
-                           if rec.get(k) not in (None, "")}
-                if summary:
-                    st.markdown("<div class='sh' style='margin-top:14px'>Created Record</div>",
-                                unsafe_allow_html=True)
-                    st.dataframe(pd.DataFrame([summary]), use_container_width=True, hide_index=True)
-            except RuntimeError as e:
-                err(str(e))
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# EDIT / DELETE
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "Edit / Delete":
-    st.markdown("<div class='page-h'>Edit / Delete Submission</div>", unsafe_allow_html=True)
-    st.markdown("<div class='page-sub'>Update or remove an existing submission.</div>",
-                unsafe_allow_html=True)
-    rows = api("get", "/submissions").json()
-
-    if not rows:
-        st.markdown(
-            "<div class='info-card'>No submissions in store. Click "
-            "<b>Import from CIEPAL</b> in the top bar first.</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        opts = {f"{r.get('Sub_ID','?')} — {r.get('End_Client','') or r.get('Job_Code','?')}": r["Sub_ID"]
-                for r in rows if r.get("Sub_ID")}
-        chosen = st.selectbox("Select Submission", list(opts.keys()))
-        sub_id = opts[chosen]
-        rec    = api("get", f"/submissions/{sub_id}").json()
-
-        st.divider()
-        tab_e, tab_d = st.tabs(["Edit", "Delete"])
-
-        with tab_e:
-            with st.form("edit_form"):
-                form_data = {}
-                for group, fields in GROUPS.items():
-                    if group == "🔖 Identifiers": continue
-                    st.markdown(f"<div class='sh'>{group}</div>", unsafe_allow_html=True)
-                    cols = st.columns(3)
-                    for i, field in enumerate(fields):
-                        with cols[i % 3]:
-                            form_data[field] = field_input(field, default=rec.get(field), key=f"e_{field}")
-                    st.markdown("")
-
-                if st.form_submit_button("Save Changes", use_container_width=True):
-                    payload = {k: v for k, v in form_data.items() if v not in (None,"")}
-                    try:
-                        api("put", f"/submissions/{sub_id}", json=payload)
-                        ok("Submission updated.")
-                        time.sleep(0.4); st.rerun()
-                    except RuntimeError as e:
-                        err(str(e))
-
-            with st.expander("🔖 Identifiers (read-only)"):
-                ic1,ic2,ic3,ic4 = st.columns(4)
-                for col, field in zip([ic1,ic2,ic3,ic4],["Sub_ID","Applicant_ID","Client_Job_ID","Job_Code"]):
-                    col.text_input(field, value=rec.get(field,""), disabled=True)
-
-        with tab_d:
-            st.warning(f"Permanently delete **{rec.get('Sub_ID')}** "
-                       f"({rec.get('End_Client') or rec.get('Job_Code','')})? Cannot be undone.")
-            if st.button("Delete Submission", type="primary", use_container_width=True):
-                try:
-                    api("delete", f"/submissions/{sub_id}")
-                    ok(f"Submission {sub_id} deleted.")
-                    time.sleep(0.5); st.rerun()
-                except RuntimeError as e:
-                    err(str(e))
 
 
 # ══════════════════════════════════════════════════════════════════════════════

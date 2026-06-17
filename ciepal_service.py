@@ -1,13 +1,12 @@
 """
-backend.py — FastAPI CRUD + CIEPAL proxy
-Run: uvicorn backend:app --reload --port 8000
+ciepal_service.py — FastAPI read endpoints + CIEPAL proxy
+Run: uvicorn ciepal_service:app --reload --port 8000
 """
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
-from models import SubmissionCreate, SubmissionUpdate
 import csv, io, json, uuid, os
 from datetime import datetime
 import requests as ext_requests
@@ -44,10 +43,7 @@ def root():
         }
     }
 
-# ─── Schemas ───────────────────────────────────────────────────────────────────
-# SubmissionCreate and SubmissionUpdate now live in the `models` package.
-
-# ─── CRUD ──────────────────────────────────────────────────────────────────────
+# ─── Read endpoints ─────────────────────────────────────────────────────────────
 @app.get("/submissions", response_model=List[dict])
 def list_submissions(
     profile_status: Optional[str] = None,
@@ -101,39 +97,6 @@ def get_submission(sub_id: str):
     if sub_id not in submissions:
         raise HTTPException(404, "Submission not found")
     return submissions[sub_id]
-
-
-@app.post("/submissions", status_code=201)
-def create_submission(body: SubmissionCreate):
-    key = body.Sub_ID or str(uuid.uuid4())[:8]
-    if key in submissions:
-        raise HTTPException(409, f"Sub_ID {key} already exists")
-    now = datetime.now().isoformat()
-    rec = body.model_dump()
-    rec["_local_id"] = key
-    rec["_created_at"] = now
-    rec["_updated_at"] = now
-    submissions[key] = rec
-    return rec
-
-
-@app.put("/submissions/{sub_id}")
-def update_submission(sub_id: str, body: SubmissionUpdate):
-    if sub_id not in submissions:
-        raise HTTPException(404, "Submission not found")
-    rec = submissions[sub_id]
-    rec.update({k: v for k, v in body.model_dump(exclude_none=True).items()})
-    rec["_updated_at"] = datetime.now().isoformat()
-    submissions[sub_id] = rec
-    return rec
-
-
-@app.delete("/submissions/{sub_id}")
-def delete_submission(sub_id: str):
-    if sub_id not in submissions:
-        raise HTTPException(404, "Submission not found")
-    del submissions[sub_id]
-    return {"message": f"Submission {sub_id} deleted"}
 
 
 # ─── CIEPAL proxy — uses hardcoded URL + token, NO query params ────────────────
