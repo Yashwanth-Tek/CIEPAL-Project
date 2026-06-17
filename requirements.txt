@@ -1,0 +1,15 @@
+# CIEPAL Submission Report — Python dependencies
+# Install with:  pip install -r requirements.txt
+
+# ── Frontend (Streamlit UI: app.py) ──────────────────────────────
+streamlit>=1.30
+pandas>=2.2          # 2.2+ required: code relies on to_numeric(errors="coerce")
+plotly>=5.18         # Dashboard chart builder (bar / pie / donut / line)
+
+# ── Backend (FastAPI service: backend.py + models.py) ────────────
+fastapi>=0.110
+uvicorn[standard]>=0.27   # ASGI server — run: uvicorn backend:app --reload --port 8000
+pydantic>=2.0             # V2 API: models use .model_dump()
+
+# ── Shared ───────────────────────────────────────────────────────
+requests>=2.31       # HTTP client (UI -> backend, backend -> CEIPAL)
