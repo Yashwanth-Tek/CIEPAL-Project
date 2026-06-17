@@ -1,5 +1,5 @@
 """
-app.py — Streamlit UI for CIEPAL Submission Report CRUD
+app.py — Streamlit UI for CIEPAL Submission Report CRUD.
 Run: streamlit run app.py
 """
 
