@@ -10,6 +10,9 @@ from typing import Optional, List
 import csv, io, json, uuid, os
 from datetime import datetime
 import requests as ext_requests
+from dotenv import load_dotenv
+
+load_dotenv()  # read .env into environment (no-op if the file is absent)
 
 app = FastAPI(title="CIEPAL Submission Report API", version="3.0.0")
 
@@ -20,9 +23,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── CIEPAL Config (hardcoded — no env vars needed) ────────────────────────────
-CIEPAL_URL   = "https://atsbi.ceipal.com/api/report-details/get-report-data/W4DKw9QXpzus8xvoxmX2Gq_BkoWnE6CR1LCTLCEwZsw?response_type=1"
-CIEPAL_TOKEN = "vZs+VPPY3olSM+eEEHN+4RuZjyYx2xuS//Y0FJJPxWMx/XcRth6BrSp7qxXHgmf/LutJUVCNlNea7AdBL1YFTFUQD+U8Gafo90le3xh7CbpWFPPh45pmaoG8J9IXNcjoZ57pcH5mzzsbGN3JY1st/Pxj5DC9GIgnaJ7OWDRtubpWgTnv+1LHEgUKswWjD7m2TCXzXhWwL40rGZhhZ9DpqizHqE2ZV75qL7GZJD4k3czAx6Ze5qLD5xMfSpPdqUtC2CP//Ffwq1Y4+xgWmml+Y858iMyCx05xZShetI5I0GyA4s2wACf3RkQW74CegT35Bm/adeJNo9WrUfJVnctYcA=="
+# ─── CIEPAL sources (credentials loaded from .env) ─────────────────────────────
+# Each source has a URL + bearer token. The UI lists these and the user picks one;
+# the chosen source name is passed as the `source` query param on CIEPAL calls.
+# To add a source: add <NAME>_URL and <NAME>_TOKEN to .env and a line here.
+SOURCES: dict[str, dict] = {
+    "tekninjas": {
+        "label": "Tekninjas",
+        "url":   os.getenv("TEKNINJAS_URL", ""),
+        "token": os.getenv("TEKNINJAS_TOKEN", ""),
+    },
+    "medninjas": {
+        "label": "MedNinjas",
+        "url":   os.getenv("MEDNINJAS_URL", ""),
+        "token": os.getenv("MEDNINJAS_TOKEN", ""),
+    },
+}
+
+DEFAULT_SOURCE = "tekninjas"
+
+
+def _resolve_source(source: Optional[str]) -> dict:
+    """Validate a source name and return its config, with clear errors."""
+    name = (source or DEFAULT_SOURCE).lower()
+    cfg = SOURCES.get(name)
+    if not cfg:
+        raise HTTPException(
+            400, f"Unknown source '{source}'. Available: {', '.join(SOURCES)}"
+        )
+    if not cfg.get("url") or not cfg.get("token"):
+        raise HTTPException(
+            500,
+            f"Source '{name}' is missing its URL or token. "
+            f"Set {name.upper()}_URL and {name.upper()}_TOKEN in your .env file."
+        )
+    return cfg
 
 # ─── In-memory store ───────────────────────────────────────────────────────────
 submissions: dict[str, dict] = {}
@@ -41,6 +76,23 @@ def root():
             "ciepal_import":     "/ciepal/import",
             "stats":             "/submissions/summary/stats",
         }
+    }
+
+
+@app.get("/sources")
+def list_sources():
+    """List the CIEPAL sources the UI can choose from. Only sources that have
+    both a URL and token configured are returned as `configured: true`."""
+    return {
+        "sources": [
+            {
+                "name":       name,
+                "label":      cfg["label"],
+                "configured": bool(cfg.get("url") and cfg.get("token")),
+            }
+            for name, cfg in SOURCES.items()
+        ],
+        "default": DEFAULT_SOURCE,
     }
 
 # ─── Read endpoints ─────────────────────────────────────────────────────────────
@@ -114,15 +166,34 @@ CIEPAL_FIELDS = [
     "Number_of_Interviews","Source","Submission_Source","Ownership","RowAdded","Client_Job_ID",
 ]
 
-def _fetch_ciepal() -> list:
-    """Call CIEPAL directly using hardcoded URL and token."""
+def _normalize_ciepal_rows(rows: list) -> list:
+    """CEIPAL may return rows as named dicts, numeric-keyed dicts, or bare arrays.
+    Map them all to {field_name: value} dicts using CIEPAL_FIELDS positional order,
+    so fields like Pipeline_Status can be read by name."""
+    out = []
+    for r in rows or []:
+        if isinstance(r, dict):
+            if r and all(str(k).isdigit() for k in r.keys()):      # numeric-keyed -> positional
+                vals = [r[k] for k in sorted(r.keys(), key=lambda x: int(x))]
+                rec = {CIEPAL_FIELDS[i]: v for i, v in enumerate(vals) if i < len(CIEPAL_FIELDS)}
+            else:
+                rec = dict(r)
+            out.append(rec)
+        elif isinstance(r, (list, tuple)):                          # bare array -> positional
+            out.append({CIEPAL_FIELDS[i]: v for i, v in enumerate(r) if i < len(CIEPAL_FIELDS)})
+    return out
+
+
+def _fetch_ciepal(source: Optional[str] = None) -> list:
+    """Call CIEPAL for the given source, using that source's URL and token."""
+    cfg = _resolve_source(source)
     headers = {
-        "Authorization": f"Bearer {CIEPAL_TOKEN}",
+        "Authorization": f"Bearer {cfg['token']}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
     try:
-        resp = ext_requests.get(CIEPAL_URL, headers=headers, timeout=30)
+        resp = ext_requests.get(cfg["url"], headers=headers, timeout=30)
         resp.raise_for_status()
         payload = resp.json()
     except ext_requests.exceptions.HTTPError:
@@ -160,22 +231,61 @@ def _fetch_ciepal() -> list:
 
 
 @app.get("/ciepal/preview")
-def preview_ciepal(limit: int = Query(50, le=500)):
-    rows = _fetch_ciepal()
-    return {"rows": rows[:limit], "total": len(rows)}
+def preview_ciepal(limit: int = Query(50, le=500), source: Optional[str] = None):
+    rows = _fetch_ciepal(source)
+    return {"rows": rows[:limit], "total": len(rows), "source": (source or DEFAULT_SOURCE).lower()}
+
+
+@app.get("/ciepal/stats")
+def ciepal_stats(source: Optional[str] = None):
+    """Dashboard metrics computed from the LIVE CIEPAL feed (same source as the
+    report), so the totals always match what CIEPAL actually returns.
+
+    - total              : every submission CIEPAL returns
+    - submitted_to_client: rows whose pipeline status indicates a client submission
+    - placements         : rows whose pipeline status indicates a placement
+
+    Status wording varies between CEIPAL configurations, so matching is done by
+    keyword rather than an exact string. The distinct values actually seen are
+    returned under `pipeline_values` so the thresholds can be tuned to your data.
+    """
+    rows = _normalize_ciepal_rows(_fetch_ciepal(source))
+
+    SUBMITTED_KEYS = ("submit", "submiss")    # "Submitted to Client", "Submitted", "Client Submission"
+    PLACEMENT_KEYS = ("place", "joined", "offer accepted")  # "Placed", "Placement"
+
+    submitted = placements = 0
+    seen: dict = {}
+    for r in rows:
+        status = str(r.get("Pipeline_Status") or "").strip()
+        seen[status or "(blank)"] = seen.get(status or "(blank)", 0) + 1
+        low = status.lower()
+        if any(k in low for k in PLACEMENT_KEYS):
+            placements += 1
+        elif any(k in low for k in SUBMITTED_KEYS):
+            submitted += 1
+
+    return {
+        "total":               len(rows),
+        "submitted_to_client": submitted,
+        "placements":          placements,
+        "pipeline_values":     seen,   # distinct Pipeline_Status values + counts, for tuning
+        "source":              (source or DEFAULT_SOURCE).lower(),
+    }
 
 
 @app.get("/ciepal/raw")
-def raw_ciepal():
+def raw_ciepal(source: Optional[str] = None):
     """Debug: return CEIPAL's unmodified response envelope and its top-level keys,
     so you can see exactly what the API is sending (e.g. aaData contents,
     iTotalRecords, error messages)."""
+    cfg = _resolve_source(source)
     headers = {
-        "Authorization": f"Bearer {CIEPAL_TOKEN}",
+        "Authorization": f"Bearer {cfg['token']}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
-    resp = ext_requests.get(CIEPAL_URL, headers=headers, timeout=30)
+    resp = ext_requests.get(cfg["url"], headers=headers, timeout=30)
     try:
         payload = resp.json()
     except Exception:
@@ -189,15 +299,19 @@ def raw_ciepal():
 
 
 @app.get("/ciepal/report")
-def download_ciepal_report(format: str = Query("csv", enum=["csv", "json"])):
-    rows = _fetch_ciepal()
+def download_ciepal_report(format: str = Query("csv", enum=["csv", "json"]),
+                           source: Optional[str] = None):
+    # Normalize so positional/numeric-keyed CEIPAL rows become named-field dicts
+    # (otherwise CSV headers come out as 0,1,2,... instead of Sub_ID, Job_Code, ...).
+    rows = _normalize_ciepal_rows(_fetch_ciepal(source))
+    src  = (source or DEFAULT_SOURCE).lower()
     ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if format == "json":
         content = json.dumps(rows, indent=2, default=str)
         return StreamingResponse(
             io.BytesIO(content.encode()), media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename=ciepal_report_{ts}.json"},
+            headers={"Content-Disposition": f"attachment; filename={src}_report_{ts}.json"},
         )
 
     keys = CIEPAL_FIELDS if (rows and isinstance(rows[0], dict) and "Sub_ID" in rows[0]) \
@@ -210,18 +324,21 @@ def download_ciepal_report(format: str = Query("csv", enum=["csv", "json"])):
 
     return StreamingResponse(
         io.BytesIO(buf.getvalue().encode()), media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=ciepal_report_{ts}.csv"},
+        headers={"Content-Disposition": f"attachment; filename={src}_report_{ts}.csv"},
     )
 
 
 @app.get("/ciepal/import")
-def import_from_ciepal():
+def import_from_ciepal(source: Optional[str] = None):
     """Pull CIEPAL data into the local in-memory store."""
-    rows  = _fetch_ciepal()
+    rows  = _normalize_ciepal_rows(_fetch_ciepal(source))
     added, skipped = 0, 0
     now   = datetime.now().isoformat()
     for row in rows:
-        key = str(row.get("Sub_ID", uuid.uuid4()))
+        # Use Sub_ID when present and non-empty; otherwise mint a stable id so
+        # rows with blank Sub_ID don't all collide on the same "" key.
+        sub_id = str(row.get("Sub_ID") or "").strip()
+        key = sub_id or str(uuid.uuid4())[:8]
         if key in submissions:
             skipped += 1
             continue

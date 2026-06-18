@@ -9,8 +9,12 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 import time
+import os
+from dotenv import load_dotenv
 
-API_BASE = "http://localhost:8000"
+load_dotenv()  # read .env (API_BASE) into environment
+
+API_BASE = os.getenv("API_BASE", "http://localhost:8000")
 
 st.set_page_config(
     page_title="CIEPAL Submissions",
@@ -77,6 +81,9 @@ st.markdown("""
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
 .page-sub { color:#8b93b8; font-size:.9rem; margin-bottom:6px; }
+
+.src-label { font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+             color:#a78bfa; padding-top:8px; }
 
 .sh { font-size:.66rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
       color:#a78bfa; margin:4px 0 12px; padding-bottom:6px;
@@ -459,6 +466,7 @@ def field_input(label, default=None, key=None, required=False):
 if "preview_df"    not in st.session_state: st.session_state.preview_df    = None
 if "preview_total" not in st.session_state: st.session_state.preview_total = 0
 if "page"          not in st.session_state: st.session_state.page          = "Dashboard"
+if "source"        not in st.session_state: st.session_state.source        = "tekninjas"
 
 # ─── Backend health check ──────────────────────────────────────────────────────
 try:
@@ -466,6 +474,23 @@ try:
     backend_ok = hc.status_code == 200
 except Exception:
     backend_ok = False
+
+# ─── Available data sources (Tekninjas / MedNinjas) ────────────────────────────
+# Pulled from the backend so the UI reflects whatever is configured in .env.
+SOURCE_OPTIONS = [("tekninjas", "Tekninjas"), ("medninjas", "MedNinjas")]  # fallback
+if backend_ok:
+    try:
+        _src = requests.get(f"{API_BASE}/sources", timeout=3).json().get("sources", [])
+        configured = [(s["name"], s["label"]) for s in _src if s.get("configured")]
+        if configured:
+            SOURCE_OPTIONS = configured
+    except Exception:
+        pass  # keep fallback
+
+# keep the selected source valid against what's actually available
+_valid_names = [n for n, _ in SOURCE_OPTIONS]
+if st.session_state.source not in _valid_names:
+    st.session_state.source = _valid_names[0]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TOP BAR  (brand + status + import)   — replaces the old sidebar
@@ -510,7 +535,8 @@ with nav_cols[3]:
                  use_container_width=True, disabled=not backend_ok):
         with st.spinner("Importing from CIEPAL…"):
             try:
-                res = api("get", "/ciepal/import").json()
+                res = api("get", "/ciepal/import",
+                          params={"source": st.session_state.source}).json()
                 ok(f"Imported <b>{res['imported']}</b> rows. "
                    f"{res['skipped_duplicates']} duplicates skipped. "
                    f"Total in store: <b>{res['total_in_store']}</b>")
@@ -519,6 +545,25 @@ with nav_cols[3]:
             except RuntimeError as e:
                 err(str(e))
     st.markdown("</div>", unsafe_allow_html=True)
+
+# ─── Data source selector (always visible) ─────────────────────────────────────
+src_labels = [label for _, label in SOURCE_OPTIONS]
+src_names  = [name for name, _ in SOURCE_OPTIONS]
+current_idx = src_names.index(st.session_state.source) if st.session_state.source in src_names else 0
+
+sc1, sc2 = st.columns([0.18, 1])
+with sc1:
+    st.markdown("<div class='src-label'>Data source</div>", unsafe_allow_html=True)
+with sc2:
+    chosen_label = st.radio(
+        "Data source", src_labels, index=current_idx,
+        horizontal=True, label_visibility="collapsed", key="source_radio",
+    )
+chosen_name = src_names[src_labels.index(chosen_label)]
+if chosen_name != st.session_state.source:
+    st.session_state.source = chosen_name
+    st.session_state.preview_df = None      # clear cached preview from the old source
+    st.rerun()
 
 st.markdown("<hr/>", unsafe_allow_html=True)
 
@@ -529,21 +574,23 @@ page = st.session_state.page
 # ══════════════════════════════════════════════════════════════════════════════
 if page == "Dashboard":
     st.markdown("<div class='page-h'>Submission Dashboard</div>", unsafe_allow_html=True)
-    st.markdown("<div class='page-sub'>Live overview of all submissions in the local store.</div>",
+    st.markdown("<div class='page-sub'>Live overview of submissions pulled directly from CIEPAL.</div>",
                 unsafe_allow_html=True)
 
     try:
-        stats = api("get", "/submissions/summary/stats").json()
-        rows  = normalize_rows(api("get", "/submissions").json())
+        src = st.session_state.source
+        stats = api("get", "/ciepal/stats", params={"source": src}).json()
+        # Pull the same live rows the cards are counting, so the table and charts
+        # below agree with the metrics (instead of the accumulating local store).
+        preview = api("get", "/ciepal/preview", params={"limit": 500, "source": src}).json()
+        rows = normalize_rows(preview.get("rows", []))
     except Exception as e:
         st.error(str(e)); st.stop()
 
-    c1,c2,c3,c4,c5 = st.columns(5)
-    c1.metric("Total Submissions",  stats.get("total", len(rows)))
-    c2.metric("Avg Bill Rate",      f"${stats.get('avg_bill_rate', 0):,.0f}")
-    c3.metric("Max Bill Rate",      f"${stats.get('max_bill_rate', 0):,.0f}")
-    c4.metric("Profile Statuses",   len(stats.get("by_profile_status", {})))
-    c5.metric("Pipeline Stages",    len(stats.get("by_pipeline_status", {})))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Submissions",   stats.get("total", 0))
+    c2.metric("Submitted to Client", stats.get("submitted_to_client", 0))
+    c3.metric("Placements",          stats.get("placements", 0))
 
     st.divider()
 
@@ -667,8 +714,11 @@ if page == "Dashboard":
 # DOWNLOAD REPORT
 # ══════════════════════════════════════════════════════════════════════════════
 elif page == "Download Report":
+    src = st.session_state.source
+    src_label = dict(SOURCE_OPTIONS).get(src, src.title())
     st.markdown("<div class='page-h'>Download CIEPAL Report</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sh'>Live from atsbi.ceipal.com</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sh'>Live from CIEPAL · source: <b>{src_label}</b></div>",
+                unsafe_allow_html=True)
 
     c1, c2 = st.columns([2,2])
     fmt   = c1.radio("Format", ["CSV","JSON"], horizontal=True)
@@ -682,7 +732,8 @@ elif page == "Download Report":
         if st.button("Load Preview", use_container_width=True):
             with st.spinner("Fetching from CIEPAL…"):
                 try:
-                    data = api("get", "/ciepal/preview", params={"limit": limit}).json()
+                    data = api("get", "/ciepal/preview",
+                               params={"limit": limit, "source": src}).json()
                     rows = data.get("rows", [])
                     if rows:
                         st.session_state.preview_df    = pd.DataFrame(rows)
@@ -706,8 +757,8 @@ elif page == "Download Report":
     with right:
         st.markdown("<div class='sh'>Export</div>", unsafe_allow_html=True)
         st.markdown(
-            "<p style='font-size:.68rem;color:#8b93b8;word-break:break-all;margin-bottom:14px'>"
-            "atsbi.ceipal.com/api/report-details/get-report-data/W4DKw9QX…</p>",
+            f"<p style='font-size:.72rem;color:#8b93b8;margin-bottom:14px'>"
+            f"Exporting live data for <b>{src_label}</b>.</p>",
             unsafe_allow_html=True,
         )
 
@@ -715,14 +766,16 @@ elif page == "Download Report":
         if st.button(f"Download {fmt}", use_container_width=True):
             with st.spinner(f"Downloading {fmt}…"):
                 try:
-                    resp = api("get", "/ciepal/report", params={"format": fmt.lower()})
+                    resp = api("get", "/ciepal/report",
+                               params={"format": fmt.lower(), "source": src})
                     ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
                     ext  = fmt.lower()
                     mime = "text/csv" if fmt == "CSV" else "application/json"
+                    fname = f"{src}_report_{ts}.{ext}"
                     st.download_button(
-                        label=f"Save ciepal_{ts}.{ext}",
+                        label=f"Save {fname}",
                         data=resp.content,
-                        file_name=f"ciepal_{ts}.{ext}",
+                        file_name=fname,
                         mime=mime,
                         use_container_width=True,
                     )
