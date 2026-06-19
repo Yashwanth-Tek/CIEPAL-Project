@@ -186,6 +186,156 @@ hr { border-color: rgba(124,92,255,.14) !important; }
     border:1px solid rgba(124,92,255,.18); border-radius:16px;
     padding:20px 22px; color:#aab1d6; font-size:.92rem;
 }
+
+/* ---- upgraded workspace shell ---- */
+.block-container {
+    padding-left: clamp(1.2rem, 4vw, 3.8rem);
+    padding-right: clamp(1.2rem, 4vw, 3.8rem);
+}
+.topbar {
+    position: relative;
+    overflow: hidden;
+    min-height: 78px;
+}
+.topbar::before {
+    content:"";
+    position:absolute; inset:0;
+    background:
+        linear-gradient(90deg, rgba(255,255,255,.08), transparent 34%),
+        radial-gradient(520px 160px at 78% 0%, rgba(6,182,212,.16), transparent 65%);
+    pointer-events:none;
+}
+.brand, .topbar > div:last-child { position:relative; z-index:1; }
+.brand-sub { color:#99a3c7; }
+
+.nav-shell {
+    background: rgba(11,15,29,.56);
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 16px;
+    padding: 8px;
+    margin: 10px 0 22px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.source-panel {
+    display:flex; align-items:center; justify-content:space-between; gap:18px;
+    margin: 6px 0 26px;
+    padding: 14px 18px;
+    border: 1px solid rgba(124,92,255,.18);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(18,23,42,.72), rgba(12,16,31,.48));
+}
+.source-copy { min-width:180px; }
+.source-title {
+    font-size:.68rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+    color:#a78bfa; margin-bottom:3px;
+}
+.source-sub { color:#8790b0; font-size:.78rem; }
+.hero-row {
+    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
+    margin: 4px 0 22px;
+}
+.hero-kicker {
+    color:#8fb7ff; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+    font-size:.68rem; margin-bottom:8px;
+}
+.hero-note {
+    color:#9aa4c7; font-size:.85rem; max-width:620px; line-height:1.5;
+}
+.mini-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    color:#c4b5fd; background:rgba(124,58,237,.12);
+    border:1px solid rgba(167,139,250,.22);
+    border-radius:999px; padding:8px 12px; font-size:.78rem; font-weight:700;
+    white-space:nowrap;
+}
+.stat-card {
+    position:relative; overflow:hidden;
+    min-height:118px; padding:18px 20px;
+    background:
+        linear-gradient(145deg, rgba(30,37,63,.92), rgba(16,20,36,.92)),
+        radial-gradient(320px 140px at 90% 0%, rgba(14,165,233,.16), transparent 60%);
+    border:1px solid rgba(148,163,184,.16);
+    border-radius:16px;
+    box-shadow: 0 18px 42px -28px rgba(6,182,212,.65);
+}
+.stat-card::after {
+    content:""; position:absolute; inset:auto 18px 0 18px; height:2px;
+    background:linear-gradient(90deg,#7c3aed,#06b6d4,transparent);
+    opacity:.78;
+}
+.stat-label {
+    color:#98a2c4; font-size:.68rem; font-weight:800; letter-spacing:.14em;
+    text-transform:uppercase; margin-bottom:12px;
+}
+.stat-value {
+    color:#f4f7ff; font-size:2rem; font-weight:850; letter-spacing:-.03em; line-height:1;
+}
+.stat-foot { color:#7dd3fc; font-size:.75rem; margin-top:12px; }
+.surface {
+    background: linear-gradient(180deg, rgba(19,24,43,.82), rgba(10,14,26,.82));
+    border:1px solid rgba(148,163,184,.16);
+    border-radius:18px;
+    padding:18px;
+    box-shadow: 0 22px 60px -42px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.04);
+    margin-bottom:18px;
+}
+.surface.tight { padding:14px; }
+.surface-head {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    padding-bottom:14px; margin-bottom:16px;
+    border-bottom:1px solid rgba(124,92,255,.16);
+}
+.surface-title {
+    color:#eef2ff; font-size:1rem; font-weight:800; letter-spacing:-.01em;
+}
+.surface-sub { color:#8f99ba; font-size:.8rem; margin-top:4px; line-height:1.45; }
+.export-card {
+    background:
+        linear-gradient(155deg, rgba(12,20,36,.95), rgba(28,24,50,.88)),
+        radial-gradient(320px 180px at 100% 10%, rgba(34,211,238,.16), transparent 62%);
+    border:1px solid rgba(125,211,252,.22);
+    border-radius:18px;
+    padding:20px;
+    min-height:245px;
+    box-shadow: 0 18px 42px -30px rgba(34,211,238,.72);
+}
+.export-title {
+    color:#eef2ff; font-size:1rem; font-weight:800; margin-bottom:8px;
+}
+.export-copy { color:#95a0bf; font-size:.82rem; line-height:1.5; margin-bottom:22px; }
+.export-detail {
+    color:#7dd3fc; font-size:.72rem; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; margin-bottom:12px;
+}
+div[data-testid="stDataFrame"] {
+    box-shadow: 0 16px 38px -30px rgba(0,0,0,.95);
+}
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background: rgba(22,27,47,.96) !important;
+}
+[data-testid="stRadio"] label,
+[data-testid="stNumberInput"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stMultiSelect"] label {
+    color:#dbe2ff !important;
+    font-weight:700 !important;
+}
+[data-testid="stRadio"] [role="radiogroup"] {
+    gap: 1rem;
+}
+[data-testid="stMultiSelect"] > div,
+[data-testid="stNumberInput"] > div,
+[data-testid="stSelectbox"] > div {
+    background: rgba(17,22,39,.72);
+}
+
+@media (max-width: 820px) {
+    .topbar, .source-panel, .hero-row, .surface-head {
+        align-items:flex-start;
+        flex-direction:column;
+    }
+    .pill, .mini-badge { white-space:normal; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -322,6 +472,218 @@ def ok(m):   st.markdown(f"<div class='ok'>✅ {m}</div>",   unsafe_allow_html=T
 def err(m):  st.markdown(f"<div class='err'>❌ {m}</div>",  unsafe_allow_html=True)
 def warn(m): st.markdown(f"<div class='warn'>⚠️ {m}</div>", unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* ===== CIEPAL Command Center redesign ===== */
+:root {
+    --bg: #090d14;
+    --line: rgba(148,163,184,.18);
+    --text: #eef4f8;
+    --muted: #8a97a8;
+    --soft: #c7d1dc;
+    --teal: #2dd4bf;
+    --blue: #38bdf8;
+    --lime: #a3e635;
+    --coral: #fb7185;
+    --amber: #fbbf24;
+}
+[data-testid="stAppViewContainer"] {
+    background:
+        linear-gradient(180deg, rgba(12,18,28,.92), rgba(8,12,18,.98)),
+        radial-gradient(900px 420px at 85% -12%, rgba(45,212,191,.14), transparent 60%),
+        radial-gradient(780px 360px at 5% -8%, rgba(251,191,36,.10), transparent 58%),
+        var(--bg) !important;
+}
+.block-container {
+    max-width: 1400px !important;
+    padding-top: 1rem !important;
+    padding-bottom: 3rem !important;
+}
+hr {
+    margin: 1.35rem 0 !important;
+    border-color: rgba(148,163,184,.13) !important;
+}
+.topbar {
+    min-height: 96px !important;
+    padding: 18px 22px !important;
+    border-radius: 8px !important;
+    background: linear-gradient(135deg, rgba(18,26,37,.96), rgba(10,15,22,.96)) !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 26px 80px -58px rgba(0,0,0,.95) !important;
+}
+.topbar::before {
+    background:
+        linear-gradient(90deg, rgba(45,212,191,.14), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,.045), transparent) !important;
+}
+.brand-logo {
+    width: 52px !important; height: 52px !important;
+    border-radius: 8px !important;
+    background: linear-gradient(135deg, #2dd4bf, #38bdf8) !important;
+    color: #061018 !important;
+    font-size: 0 !important;
+    box-shadow: 0 16px 34px -20px rgba(45,212,191,.9) !important;
+}
+.brand-logo::after {
+    content: "CP";
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: .03em;
+}
+.brand-title {
+    color: var(--text) !important;
+    background: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    font-size: 1.35rem !important;
+    letter-spacing: -.01em !important;
+}
+.brand-sub { color: var(--muted) !important; letter-spacing:.02em !important; }
+.top-meta {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;
+}
+.meta-chip, .pill {
+    border-radius: 999px !important;
+    background: rgba(15,23,32,.82) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--soft) !important;
+    font-size: .72rem !important;
+    font-weight: 750 !important;
+    padding: 8px 12px !important;
+}
+.pill-on { color: #86efac !important; border-color: rgba(34,197,94,.34) !important; }
+.pill-off { color: #fda4af !important; border-color: rgba(251,113,133,.34) !important; }
+.dot { width:7px !important; height:7px !important; }
+div[data-testid="column"] .stButton > button,
+.stDownloadButton > button,
+.stForm .stButton > button {
+    min-height: 42px !important;
+    border-radius: 8px !important;
+    background: rgba(15,23,32,.78) !important;
+    color: #dbe5ee !important;
+    border: 1px solid rgba(148,163,184,.24) !important;
+    box-shadow: none !important;
+    font-weight: 760 !important;
+}
+div[data-testid="column"] .stButton > button:hover {
+    background: rgba(22,33,45,.95) !important;
+    border-color: rgba(45,212,191,.42) !important;
+    color: #ffffff !important;
+}
+.nav-active div[data-testid="column"] .stButton > button,
+.stButton > button[kind="primary"],
+.import-btn > button,
+.dl-btn > button,
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #2dd4bf, #38bdf8) !important;
+    color: #061018 !important;
+    border: 1px solid rgba(125,211,252,.38) !important;
+    box-shadow: 0 14px 36px -24px rgba(56,189,248,.95) !important;
+}
+.import-btn > button { background: linear-gradient(135deg, #a3e635, #2dd4bf) !important; }
+.stButton > button[kind="primary"] { animation: none !important; }
+.source-copy { min-width: 0 !important; padding-top: 2px; }
+.source-title, .hero-kicker, .sh, .export-detail, .stat-label, .section-eyebrow {
+    color: var(--teal) !important;
+    letter-spacing: .14em !important;
+}
+.source-sub, .page-sub, .hero-note, .surface-sub, .export-copy { color: var(--muted) !important; }
+[data-testid="stRadio"] [role="radiogroup"] {
+    background: rgba(15,23,32,.55);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+[data-testid="stRadio"] label p { color: var(--soft) !important; font-weight: 760 !important; }
+.hero-row { padding: 18px 0 6px !important; margin-bottom: 18px !important; }
+.page-h {
+    color: var(--text) !important;
+    background: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    font-size: clamp(2rem, 3vw, 3.05rem) !important;
+    line-height: .98 !important;
+    letter-spacing: -.045em !important;
+}
+.hero-note { font-size: .92rem !important; }
+.mini-badge {
+    border-radius: 8px !important;
+    color: #c9f7ef !important;
+    background: rgba(45,212,191,.10) !important;
+    border-color: rgba(45,212,191,.28) !important;
+}
+.stat-card {
+    min-height: 136px !important;
+    border-radius: 8px !important;
+    background: linear-gradient(180deg, rgba(21,29,40,.98), rgba(13,20,29,.98)) !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 20px 60px -48px rgba(0,0,0,.95) !important;
+}
+.stat-card::after {
+    height: 3px !important;
+    inset: auto 0 0 0 !important;
+    background: var(--accent, linear-gradient(90deg, #2dd4bf, #38bdf8)) !important;
+}
+.stat-value { color: #f8fafc !important; font-size: 2.25rem !important; }
+.stat-foot { color: var(--muted) !important; }
+.section-header {
+    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
+    margin: 1.25rem 0 .9rem;
+}
+.section-title { color: var(--text); font-size: 1.12rem; font-weight: 850; letter-spacing:-.015em; }
+.section-copy { color: var(--muted); font-size:.83rem; margin-top:4px; }
+.section-count {
+    color: var(--soft); background:rgba(15,23,32,.72); border:1px solid var(--line);
+    border-radius:999px; padding:7px 10px; font-size:.74rem; font-weight:800; white-space:nowrap;
+}
+.workflow-card, .surface, .export-card, .info-card {
+    border-radius: 8px !important;
+    background: linear-gradient(180deg, rgba(17,24,34,.96), rgba(11,17,25,.96)) !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 22px 70px -56px rgba(0,0,0,.95) !important;
+}
+.workflow-card { padding: 18px 18px 16px; min-height: 168px; }
+.workflow-title { color: var(--text); font-weight:850; font-size:1.02rem; margin-bottom:8px; }
+.workflow-copy { color: var(--muted); line-height:1.48; font-size:.84rem; }
+.workflow-index {
+    width: 28px; height: 28px; display:flex; align-items:center; justify-content:center;
+    color:#061018; background:var(--teal); border-radius:8px; font-size:.76rem; font-weight:900;
+    margin-bottom:16px;
+}
+.surface-head { border-color: rgba(148,163,184,.14) !important; }
+.export-card { min-height: 270px !important; }
+.export-title, .surface-title { color: var(--text) !important; }
+[data-testid="stTextInput"] > div > div > input,
+[data-testid="stNumberInput"] input,
+[data-testid="stSelectbox"] > div,
+[data-testid="stMultiSelect"] > div,
+textarea {
+    background: rgba(10,16,24,.94) !important;
+    border: 1px solid rgba(148,163,184,.22) !important;
+    color: var(--text) !important;
+    border-radius: 8px !important;
+}
+[data-testid="stTextInput"] > div > div > input:focus,
+[data-testid="stNumberInput"] input:focus {
+    border-color: rgba(45,212,191,.58) !important;
+    box-shadow: 0 0 0 3px rgba(45,212,191,.12) !important;
+}
+div[data-testid="stDataFrame"] {
+    border-color: rgba(148,163,184,.20) !important;
+    border-radius: 8px !important;
+}
+[data-testid="stDataFrame"] [role="columnheader"] { background: #111827 !important; }
+.ok, .err, .warn {
+    border-radius: 8px !important;
+    background: rgba(15,23,32,.86) !important;
+    border: 1px solid var(--line) !important;
+    border-left-width: 4px !important;
+}
+@media (max-width: 820px) {
+    .top-meta, .section-header { align-items:flex-start; justify-content:flex-start; }
+    .section-header { flex-direction:column; }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ─── Data normalization ────────────────────────────────────────────────────────
 # CEIPAL can return rows as positional arrays (or numeric-string-keyed objects)
 # instead of named dicts. Map them onto these field names by position so the
@@ -437,6 +799,18 @@ HELP = {
 def pretty(label):
     return LABELS.get(label, label.replace("_", " "))
 
+def stat_card(label, value, foot="Live CIEPAL data"):
+    st.markdown(
+        f"""
+        <div class="stat-card">
+          <div class="stat-label">{label}</div>
+          <div class="stat-value">{value}</div>
+          <div class="stat-foot">{foot}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def field_input(label, default=None, key=None, required=False):
     disp = pretty(label) + (" *" if required else "")
     help_txt = HELP.get(label)
@@ -551,9 +925,13 @@ src_labels = [label for _, label in SOURCE_OPTIONS]
 src_names  = [name for name, _ in SOURCE_OPTIONS]
 current_idx = src_names.index(st.session_state.source) if st.session_state.source in src_names else 0
 
-sc1, sc2 = st.columns([0.18, 1])
+sc1, sc2 = st.columns([0.25, 1])
 with sc1:
-    st.markdown("<div class='src-label'>Data source</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='source-copy'><div class='source-title'>Data source</div>"
+        "<div class='source-sub'>Switch the live report feed.</div></div>",
+        unsafe_allow_html=True,
+    )
 with sc2:
     chosen_label = st.radio(
         "Data source", src_labels, index=current_idx,
@@ -573,9 +951,20 @@ page = st.session_state.page
 # DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
 if page == "Dashboard":
-    st.markdown("<div class='page-h'>Submission Dashboard</div>", unsafe_allow_html=True)
-    st.markdown("<div class='page-sub'>Live overview of submissions pulled directly from CIEPAL.</div>",
-                unsafe_allow_html=True)
+    src_label = dict(SOURCE_OPTIONS).get(st.session_state.source, st.session_state.source.title())
+    st.markdown(
+        f"""
+        <div class="hero-row">
+          <div>
+            <div class="hero-kicker">Operations overview</div>
+            <div class="page-h">Submission Dashboard</div>
+            <div class="hero-note">Live overview of submissions pulled directly from CIEPAL for <b>{src_label}</b>.</div>
+          </div>
+          <div class="mini-badge">{src_label} source</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     try:
         src = st.session_state.source
@@ -588,9 +977,12 @@ if page == "Dashboard":
         st.error(str(e)); st.stop()
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total Submissions",   stats.get("total", 0))
-    c2.metric("Submitted to Client", stats.get("submitted_to_client", 0))
-    c3.metric("Placements",          stats.get("placements", 0))
+    with c1:
+        stat_card("Total Submissions", stats.get("total", 0), "All live records")
+    with c2:
+        stat_card("Submitted to Client", stats.get("submitted_to_client", 0), "Client-ready profiles")
+    with c3:
+        stat_card("Placements", stats.get("placements", 0), "Successful outcomes")
 
     st.divider()
 
@@ -716,19 +1108,43 @@ if page == "Dashboard":
 elif page == "Download Report":
     src = st.session_state.source
     src_label = dict(SOURCE_OPTIONS).get(src, src.title())
-    st.markdown("<div class='page-h'>Download CIEPAL Report</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='sh'>Live from CIEPAL · source: <b>{src_label}</b></div>",
-                unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="hero-row">
+          <div>
+            <div class="hero-kicker">Report center</div>
+            <div class="page-h">Download CIEPAL Report</div>
+            <div class="hero-note">Preview live rows, choose a format, and export the latest report for <b>{src_label}</b>.</div>
+          </div>
+          <div class="mini-badge">Live from CIEPAL</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
+    st.markdown(
+        "<div class='surface tight'><div class='surface-head'><div>"
+        "<div class='surface-title'>Export settings</div>"
+        "<div class='surface-sub'>Choose the file type and how many rows to inspect before downloading.</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
     c1, c2 = st.columns([2,2])
     fmt   = c1.radio("Format", ["CSV","JSON"], horizontal=True)
     limit = c2.number_input("Preview rows", 5, 500, 50, 10)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
     left, right = st.columns([3,1])
 
     with left:
-        st.markdown("<div class='sh'>Live Preview</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='surface'><div class='surface-head'><div>"
+            "<div class='surface-title'>Live Preview</div>"
+            "<div class='surface-sub'>Load a fresh sample from the selected source before exporting.</div>"
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
         if st.button("Load Preview", use_container_width=True):
             with st.spinner("Fetching from CIEPAL…"):
                 try:
@@ -753,12 +1169,20 @@ elif page == "Download Report":
             ordered = [c for c in PRIORITY if c in df.columns] + \
                       [c for c in df.columns if c not in PRIORITY]
             st.dataframe(df[ordered], use_container_width=True, hide_index=True)
+        else:
+            st.markdown(
+                "<div class='info-card'>No preview loaded yet. Use Load Preview to inspect rows from the current source.</div>",
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with right:
-        st.markdown("<div class='sh'>Export</div>", unsafe_allow_html=True)
+        st.markdown("<div class='export-card'>", unsafe_allow_html=True)
         st.markdown(
-            f"<p style='font-size:.72rem;color:#8b93b8;margin-bottom:14px'>"
-            f"Exporting live data for <b>{src_label}</b>.</p>",
+            f"<div class='export-detail'>Export</div>"
+            f"<div class='export-title'>Download {fmt}</div>"
+            f"<div class='export-copy'>Exporting live data for <b>{src_label}</b>. "
+            f"The file is generated directly from the backend when you click download.</div>",
             unsafe_allow_html=True,
         )
 
@@ -782,4 +1206,5 @@ elif page == "Download Report":
                     ok(f"Ready — {len(resp.content):,} bytes.")
                 except RuntimeError as e:
                     err(str(e))
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
