@@ -1,0 +1,31 @@
+[project]
+name = "ciepal-project"
+version = "0.1.0"
+description = "CIEPAL Submission Report Manager — FastAPI backend + Streamlit dashboard for pulling, viewing, and exporting CEIPAL ATS submission data."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    # ── Frontend (Streamlit UI: app.py) ──────────────────────────────
+    "streamlit>=1.30",            # dashboard UI
+    "pandas>=2.2",                # 2.2+ required: code relies on to_numeric(errors="coerce")
+    "plotly>=5.18",               # dashboard chart builder (bar / pie / donut / line)
+
+    # ── Backend (FastAPI service: ciepal_service.py + models.py) ─────
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",    # ASGI server — run: uvicorn ciepal_service:app --reload --port 8000
+    "pydantic>=2.0",              # V2 API: models use .model_dump()
+
+    # ── Shared ───────────────────────────────────────────────────────
+    "requests>=2.31",             # HTTP client (UI -> backend, backend -> CEIPAL)
+    "python-dotenv>=1.0",         # loads CIEPAL credentials + API_BASE from .env
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# This project is an application, not an importable library, so there's no
+# package to build/install — only the dependencies above matter.
+[tool.hatch.build.targets.wheel]
+bypass-selection = true

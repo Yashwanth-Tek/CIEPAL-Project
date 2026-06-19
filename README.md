@@ -27,7 +27,8 @@ The project is two services that talk over HTTP on localhost:
 | `app.py` | Streamlit frontend — dashboard, create/edit/delete forms, report download. |
 | `ciepal_service.py` | FastAPI service — CRUD endpoints, CEIPAL proxy, CSV/JSON export. |
 | `models.py` | Pydantic schemas (`SubmissionCreate`, `SubmissionUpdate`) shared by the backend. |
-| `requirements.txt` | Python dependencies. |
+| `requirements.txt` | Python dependencies (pip). |
+| `pyproject.toml` | Python dependencies (uv / modern tooling) — same set as `requirements.txt`. |
 
 The backend keeps submissions in an in-memory dictionary, so data resets whenever the server restarts. This keeps the project dependency-free (no database to set up), but it is not meant for persistent production use as-is.
 
@@ -50,8 +51,23 @@ The backend keeps submissions in an in-memory dictionary, so data resets wheneve
 # clone the repo
 git clone https://github.com/Yashwanth-Tek/CIEPAL-Project.git
 cd CIEPAL-Project
+```
 
-# (recommended) create and activate a virtual environment
+Dependencies are declared in **both** `requirements.txt` (for pip) and `pyproject.toml` (for [uv](https://docs.astral.sh/uv/) and other modern tooling). They list the same packages — use whichever workflow you prefer.
+
+**Option A — uv (recommended):**
+
+```bash
+# creates the virtual environment and installs everything into it
+uv sync
+```
+
+`uv sync` reads `pyproject.toml`, builds a `.venv`, and installs the dependencies there — so the packages always land in the environment uv runs commands against. Prefix run commands with `uv run` (shown below), or activate `.venv` manually.
+
+**Option B — pip + virtualenv:**
+
+```bash
+# create and activate a virtual environment
 python -m venv .venv
 # Windows:
 .venv\Scripts\activate
@@ -60,15 +76,20 @@ source .venv/bin/activate
 
 # install dependencies
 pip install -r requirements.txt
+```
 
-# set up credentials (see Configuration below)
+> **Tip (Windows / uv users):** if `pip install` reports packages as "already satisfied" but the app then can't find them, your `pip` and your run command are pointing at different Python installs. Install into the venv explicitly with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`, or just use `uv sync` (Option A), which avoids the problem entirely.
+
+Then set up credentials (see [Configuration](#configuration)):
+
+```bash
 cp .env.example .env
 # then edit .env and fill in your CEIPAL URLs and tokens
 ```
 
 ### Running
 
-The two services run in separate terminals.
+The two services run in separate terminals. If you installed with **uv**, prefix each command with `uv run` (e.g. `uv run uvicorn ...`); if you activated a venv with pip, run the commands as-is.
 
 **Terminal 1 — backend:**
 
