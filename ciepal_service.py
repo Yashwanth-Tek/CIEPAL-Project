@@ -1,12 +1,14 @@
 """
-ciepal_service.py — FastAPI read endpoints + CIEPAL proxy
+ciepal_service.py — FastAPI backend for the CIEPAL Submission Report Manager.
+Proxies the CIEPAL report API (multi-source, selected via the `source` query
+param) and exposes preview, stats, report-download, and import endpoints.
 Run: uvicorn ciepal_service:app --reload --port 8000
 """
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List
+from typing import Optional
 import csv, io, json, uuid, os
 from datetime import datetime
 import requests as ext_requests
@@ -59,7 +61,7 @@ def _resolve_source(source: Optional[str]) -> dict:
         )
     return cfg
 
-# ─── In-memory store ───────────────────────────────────────────────────────────
+# ─── In-memory store (populated by /ciepal/import; resets on restart) ───────────
 submissions: dict[str, dict] = {}
 
 # ─── Root ──────────────────────────────────────────────────────────────────────
@@ -70,11 +72,12 @@ def root():
         "version": "3.0.0",
         "docs": "/docs",
         "endpoints": {
-            "submissions":       "/submissions",
-            "ciepal_preview":    "/ciepal/preview",
-            "ciepal_report":     "/ciepal/report",
-            "ciepal_import":     "/ciepal/import",
-            "stats":             "/submissions/summary/stats",
+            "sources":        "/sources",
+            "ciepal_preview": "/ciepal/preview",
+            "ciepal_stats":   "/ciepal/stats",
+            "ciepal_report":  "/ciepal/report",
+            "ciepal_import":  "/ciepal/import",
+            "ciepal_raw":     "/ciepal/raw",
         }
     }
 
@@ -95,63 +98,8 @@ def list_sources():
         "default": DEFAULT_SOURCE,
     }
 
-# ─── Read endpoints ─────────────────────────────────────────────────────────────
-@app.get("/submissions", response_model=List[dict])
-def list_submissions(
-    profile_status: Optional[str] = None,
-    pipeline_status: Optional[str] = None,
-    job_status: Optional[str] = None,
-    recruiter_team: Optional[str] = None,
-):
-    rows = list(submissions.values())
-    if profile_status:
-        rows = [r for r in rows if r.get("Profile_Status","").lower() == profile_status.lower()]
-    if pipeline_status:
-        rows = [r for r in rows if r.get("Pipeline_Status","").lower() == pipeline_status.lower()]
-    if job_status:
-        rows = [r for r in rows if r.get("Job_Status","").lower() == job_status.lower()]
-    if recruiter_team:
-        rows = [r for r in rows if r.get("Recruiter_Team_Name","").lower() == recruiter_team.lower()]
-    return rows
 
-
-@app.get("/submissions/summary/stats")
-def submission_stats():
-    rows = list(submissions.values())
-    if not rows:
-        return {"total": 0, "by_profile_status": {}, "by_pipeline_status": {},
-                "by_job_status": {}, "by_work_auth": {}, "by_tax_terms": {},
-                "by_source": {}, "avg_bill_rate": 0, "max_bill_rate": 0}
-
-    def freq(field):
-        out: dict = {}
-        for r in rows:
-            v = r.get(field) or "Unknown"
-            out[v] = out.get(v, 0) + 1
-        return out
-
-    rates = [r["Submission_Bill_Rate"] for r in rows if r.get("Submission_Bill_Rate")]
-    return {
-        "total":             len(rows),
-        "by_profile_status": freq("Profile_Status"),
-        "by_pipeline_status":freq("Pipeline_Status"),
-        "by_job_status":     freq("Job_Status"),
-        "by_work_auth":      freq("Work_Authorization"),
-        "by_tax_terms":      freq("Submission_Tax_Terms"),
-        "by_source":         freq("Source"),
-        "avg_bill_rate":     round(sum(rates)/len(rates), 2) if rates else 0,
-        "max_bill_rate":     max(rates) if rates else 0,
-    }
-
-
-@app.get("/submissions/{sub_id}", response_model=dict)
-def get_submission(sub_id: str):
-    if sub_id not in submissions:
-        raise HTTPException(404, "Submission not found")
-    return submissions[sub_id]
-
-
-# ─── CIEPAL proxy — uses hardcoded URL + token, NO query params ────────────────
+# ─── CIEPAL field order (used to map positional rows to named fields) ───────────
 CIEPAL_FIELDS = [
     "Sub_ID","Job_Code","Client_Manager","MSP","End_Client","Job_Type","Job_Status",
     "Job_Applied","Job_Location","States","Applicant_Location","Profile_Status",
